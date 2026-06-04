@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AFORPA - Portal Oficial del Torneo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .columna-bracket {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            height: 100%;
+            min-height: 950px;
+        }
+        /* Clase para ocultar elementos de edición a los usuarios */
+        .solo-admin { display: none !important; }
+        .body-admin .solo-admin { display: flex !important; }
+        .body-admin button.solo-admin { display: block !important; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen p-4 md:p-8">
+
+    <main class="max-w-[95%] mx-auto space-y-8">
+        
+        <!-- BARRA DE ACCESO / SEGURIDAD -->
+        <div class="flex justify-between items-center bg-gray-950 p-3 rounded-xl border border-gray-800 text-xs">
+            <div class="flex items-center gap-2">
+                <span class="inline-block w-2.5 h-2.5 rounded-full bg-yellow-500" id="status-modo-color"></span>
+                <span class="font-bold text-gray-400 uppercase tracking-wider" id="status-modo-texto">Modo Espectador (Lectura)</span>
+            </div>
+            <div class="flex items-center gap-2" id="panel-login-admin">
+                <input type="password" id="pass-admin" placeholder="Clave de Admin" class="bg-gray-950 border border-gray-700 px-2 py-1 rounded text-white focus:outline-none focus:border-green-500 w-28 text-center">
+                <button onclick="verificarAccesoAdmin()" class="bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded font-bold transition">Ingresar</button>
+            </div>
+            <button onclick="cerrarSesionAdmin()" id="btn-logout" class="hidden bg-red-600 hover:bg-red-500 text-white px-3 py-1 rounded font-bold transition">Cerrar Edición</button>
+        </div>
+
+        <!-- PANEL DE CONTROL MULTICATEGORÍA -->
+        <header class="bg-gray-800 p-6 rounded-2xl border border-green-500/30 shadow-xl space-y-6">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-gray-700 pb-4">
+                <div>
+                    <h1 class="text-2xl font-black text-green-400 tracking-wider">AFORPA MULTICATEGORÍA</h1>
+                    <p class="text-sm text-gray-400">Reglamento FAP — Cronograma Logístico Integrado</p>
+                </div>
+                
+                <!-- Gestión de Categorías -->
+                <div class="flex flex-wrap items-center gap-3 bg-gray-950 p-3 rounded-xl border border-gray-700 w-full lg:w-auto">
+                    <div class="flex items-center gap-2 solo-admin">
+                        <label class="text-xs font-bold text-gray-400 uppercase">Nueva:</label>
+                        <input type="text" id="nueva-cat-nombre" placeholder="Ej: 4ta Caballeros" class="w-36 h-9 bg-gray-800 px-3 text-xs text-white rounded-lg border border-gray-600 focus:outline-none focus:border-green-500">
+                        <button onclick="crearCategoria()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold h-9 px-3 rounded-lg text-xs uppercase tracking-wider transition">➕ Añadir</button>
+                    </div>
+                    
+                    <div class="h-6 w-[1px] bg-gray-700 hidden sm:block solo-admin"></div>
+
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs font-bold text-gray-400 uppercase">Categoría:</label>
+                        <select id="selector-categorias" onchange="cambiarCategoriaActiva()" class="bg-gray-800 text-white text-xs font-bold h-9 px-3 rounded-lg border border-gray-600 focus:outline-none focus:border-green-500 max-w-[150px]">
+                            <!-- Dinámico -->
+                        </select>
+                        <button onclick="eliminarCategoriaActual()" class="bg-red-600 hover:bg-red-500 text-white font-bold h-9 w-9 rounded-lg text-xs transition flex items-center justify-center shadow solo-admin" title="Eliminar categoría actual">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuración de la Categoría Seleccionada -->
+            <div id="panel-config-categoria" class="hidden flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-900/60 p-4 rounded-xl border border-gray-700">
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 solo-admin">
+                        <label class="text-xs font-bold text-gray-300 uppercase">Parejas:</label>
+                        <input type="number" id="total-parejas-input" value="14" min="3" max="64" class="w-16 h-9 bg-gray-800 text-center text-white font-bold rounded-lg border border-gray-600 focus:outline-none focus:border-green-500">
+                        <button onclick="inicializarEstructuraCategoria()" class="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg transition text-xs uppercase tracking-wider">
+                            🔧 Estructurar Categoría
+                        </button>
+                    </div>
+                </div>
+                <div id="resumen-estructuracion" class="text-xs text-blue-400 font-medium text-center sm:text-right w-full">
+                    Definí las parejas para empezar esta categoría.
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTENEDOR DINÁMICO DE ZONAS -->
+        <div id="contenedor-zonas" class="space-y-12"></div>
+
+        <!-- 🏆 SECCIÓN DE LLAVES (PLAYOFFS ESCALONADOS FAP) -->
+        <section id="seccion-playoffs" class="hidden bg-gray-800 rounded-2xl border border-gray-700 p-6 shadow-lg space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-700 pb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-green-400 flex items-center gap-2">
+                        <span class="w-3 h-6 bg-green-500 rounded-full inline-block"></span>
+                        CUADRO DE ELIMINACIÓN DIRECTA (<span id="dinamico-playoff-titulo"></span>)
+                    </h2>
+                    <p id="info-fase-inicial" class="text-xs text-gray-400 mt-1"></p>
+                </div>
+                <button onclick="cargarClasificadosALlaves()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs py-2 px-4 rounded-lg transition shadow-md border border-blue-400/30 solo-admin">
+                    👑 Sembrar Cabezas de Serie e Importar Cruces (FAP)
+                </button>
+            </div>
+
+            <!-- Contenedor Horizontal del Bracket -->
+            <div class="overflow-x-auto pb-6">
+                <div id="columnas-playoffs" class="flex gap-8 items-stretch min-w-[1250px] p-2 bg-gray-950/40 rounded-xl border border-gray-800/60">
+                    <!-- Se rellena dinámicamente con la estructura de árbol -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // CONFIGURÁ TU CONTRASEÑA AQUÍ (Cualquiera puede leer el código, pero frena modificaciones accidentales de los usuarios)
+        const CLAVE_ADMIN_SECRETA = "admin123";
+        let esAdminActivo = false;
+
+        let TorneoMaster = {
+            categoriaActiva: "",
+            categorias: {} 
+        };
+
+        window.onload = function() {
+            // Intentar recuperar datos guardados previamente en este navegador
+            const backup = localStorage.getItem("torneo_fap_data");
+            if (backup) {
+                TorneoMaster = JSON.parse(backup);
+                if (Object.keys(TorneoMaster.categorias).length > 0) {
+                    actualizarSelectorCategorias(TorneoMaster.categoriaActiva);
+                    return;
+                }
+            }
+            
+            // Si está vacío, iniciar por defecto
+            document.getElementById('nueva-cat-nombre').value = "Caballeros 4ta";
+            esAdminActivo = true; // Activo al inicio para permitir la primera configuración
+            actualizarInterfazModo();
+            crearCategoria();
+            esAdminActivo = false; // Bloquear inmediatamente
+            actualizarInterfazModo();
+        };
+
+        function verificarAccesoAdmin() {
+            let ingresada = document.getElementById('pass-admin').value;
+            if (ingresada === CLAVE_ADMIN_SECRETA) {
+                esAdminActivo = true;
+                document.getElementById('pass-admin').value = "";
+                actualizarInterfazModo();
+                recalcularTodoElTorneo();
+            } else {
+                alert("Contraseña incorrecta.");
+            }
+        }
+
+        function cerrarSesionAdmin() {
+            esAdminActivo = false;
+            actualizarInterfazModo();
+            recalcularTodoElTorneo();
+        }
+
+        function actualizarInterfazModo() {
+            let body = document.body;
+            let statusTexto = document.getElementById('status-modo-texto');
+            let statusColor = document.getElementById('status-modo-color');
+            let loginPanel = document.getElementById('panel-login-admin');
+            let logoutBtn = document.getElementById('btn-logout');
+
+            if (esAdminActivo) {
+                body.classList.add('body-admin');
+                statusTexto.innerText = "Modo Administrador (Edición Activa)";
+                statusColor.className = "inline-block w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse";
+                loginPanel.classList.add('hidden');
+                logoutBtn.classList.remove('hidden');
+            } else {
+                body.classList.remove('body-admin');
+                statusTexto.innerText = "Modo Espectador (Solo Lectura)";
+                statusColor.className = "inline-block w-2.5 h-2.5 rounded-full bg-yellow-500";
+                loginPanel.classList.remove('hidden');
+                logoutBtn.classList.add('hidden');
+            }
+        }
+
+        function persistirEnLocalStorage() {
+            localStorage.setItem("torneo_fap_data", JSON.stringify(TorneoMaster));
+        }
+
+        function crearCategoria() {
+            let input = document.getElementById('nueva-cat-nombre');
+            let nombre = input.value.trim();
+            if (!nombre) { alert("Escribí un nombre para la categoría."); return; }
+            if (TorneoMaster.categorias[nombre]) { alert("Esta categoría ya existe."); return; }
+
+            TorneoMaster.categorias[nombre] = {
+                configurada: false,
+                totalParejas: 14,
+                zonas: {},
+                playoff: { faseInicial: "", rondas: {} }
+            };
+
+            input.value = "";
+            actualizarSelectorCategorias(nombre);
+            persistirEnLocalStorage();
+        }
+
+        function eliminarCategoriaActual() {
+            let activa = TorneoMaster.categoriaActiva;
+            if (!activa) return;
+
+            if (confirm(`¿Seguro que querés eliminar por completo la categoría "${activa}"? Se perderán todos sus datos.`)) {
+                delete TorneoMaster.categorias[activa];
+                
+                let clavesRestantes = Object.keys(TorneoMaster.categorias);
+                if (clavesRestantes.length > 0) {
+                    actualizarSelectorCategorias(clavesRestantes[0]);
+                } else {
+                    TorneoMaster.categoriaActiva = "";
+                    document.getElementById('selector-categorias').innerHTML = "";
+                    document.getElementById('panel-config-categoria').classList.add('hidden');
+                    document.getElementById('contenedor-zonas').innerHTML = '';
+                    document.getElementById('seccion-playoffs').classList.add('hidden');
+                }
+                persistirEnLocalStorage();
+            }
+        }
+
+        function actualizarSelectorCategorias(seleccionarNombre) {
+            let selector = document.getElementById('selector-categorias');
+            selector.innerHTML = "";
+            
+            Object.keys(TorneoMaster.categorias).forEach(cat => {
+                let opt = document.createElement('option');
+                opt.value = cat; opt.innerText = cat;
+                if(cat === seleccionarNombre) opt.selected = true;
+                selector.appendChild(opt);
+            });
+
+            TorneoMaster.categoriaActiva = selector.value;
+            cargarDatosCategoriaActiva();
+        }
+
+        function cambiarCategoriaActiva() {
+            TorneoMaster.categoriaActiva = document.getElementById('selector-categorias').value;
+            cargarDatosCategoriaActiva();
+        }
+
+        function cargarDatosCategoriaActiva() {
+            let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
+            if (!cat) return;
+
+            document.getElementById('panel-config-categoria').classList.remove('hidden');
+            document.getElementById('total-parejas-input').value = cat.totalParejas;
+
+            if (cat.configurada) {
+                let distribucion = calcularDistribucionZonas(cat.totalParejas);
+                let totalZonas = distribucion.zonasDe4 + distribucion.zonasDe3;
+                document.getElementById('resumen-estructuracion').innerHTML = `
+                    🚀 <strong>${TorneoMaster.categoriaActiva}:</strong> ${cat.totalParejas} parejas / ${totalZonas} Zonas.
+                `;
+                document.getElementById('seccion-playoffs').classList.remove('hidden');
+                document.getElementById('dinamico-playoff-titulo').innerText = TorneoMaster.categoriaActiva;
+                recalcularTodoElTorneo();
+            } else {
+                document.getElementById('resumen-estructuracion').innerHTML = `Definí las parejas para empezar esta categoría.`;
+                document.getElementById('contenedor-zonas').innerHTML = '';
+                document.getElementById('seccion-playoffs').classList.add('hidden');
+            }
+        }
+
+        function calcularDistribucionZonas(total) {
+            let config = { zonasDe4: 0, zonasDe3: 0 };
+            if (total < 3) return config;
+            let resto = total % 3;
+
+            if (resto === 0) {
+                config.zonasDe3 = total / 3;
+            } else if (resto === 1) {
+                config.zonasDe4 = 1;
+                config.zonasDe3 = Math.floor((total - 4) / 3);
+            } else if (resto === 2) {
+                config.zonasDe4 = 2;
+                config.zonasDe3 = Math.floor((total - 8) / 3);
+            }
+            return config;
+        }
+
+        function inicializarEstructuraCategoria() {
+            let catActivaName = TorneoMaster.categoriaActiva;
+            let cat = TorneoMaster.categorias[catActivaName];
+            let total = parseInt(document.getElementById('total-parejas-input').value) || 0;
+            if (total < 3) { alert("Mínimo se necesitan 3 parejas."); return; }
+
+            cat.totalParejas = total;
+            cat.configurada = true;
+            cat.zonas = {};
+
+            let distribucion = calcularDistribucionZonas(total);
+            let totalZonas = distribucion.zonasDe4 + distribucion.zonasDe3;
+            
+            let letraCodigo = 65; 
+            let globalParejaId = 1;
+
+            for(let i = 0; i < distribucion.zonasDe4; i++) {
+                let nombreZona = "Zona " + String.fromCharCode(letraCodigo++);
+                cat.zonas[nombreZona] = crearEstructuraZona(4, globalParejaId);
+                globalParejaId += 4;
+            }
+            for(let i = 0; i < distribucion.zonasDe3; i++) {
+                let nombreZona = "Zona " + String.fromCharCode(letraCodigo++);
+                cat.zonas[nombreZona] = crearEstructuraZona(3, globalParejaId);
+                globalParejaId += 3;
+            }
+
+            let totalClasificados = totalZonas * 2; 
+            inicializarEstructuraPlayoffs(cat, totalClasificados, totalZonas);
+
+            document.getElementById('seccion-playoffs').classList.remove('hidden');
+            document.getElementById('dinamico-playoff-titulo').innerText = catActivaName;
+            
+            recalcularTodoElTorneo();
+            persistirEnLocalStorage();
+        }
+
+        function crearEstructuraZona(tipo, startId) {
+            let obj = { tipo: tipo, parejas: [], partidos: [] };
+            for(let i = 0; i < tipo; i++) {
+                obj.parejas.push({
+                    id: startId + i, nombre: `Pareja ${startId + i}`,
+                    pj:0, pg:0, pp:0, sf:0, sc:0, ds:0, gf:0, gc:0, dg:0, pts:0
+                });
+            }
+
+            let partidosBase = [];
+            if (tipo === 3) {
+                partidosBase = [
+                    { id: 1, desc: "Fecha 1", p1: obj.parejas[0].id, p2: obj.parejas[1].id },
+                    { id: 2, desc: "Fecha 2", p1: obj.parejas[1].id, p2: obj.parejas[2].id },
+                    { id: 3, desc: "Fecha 3", p1: obj.parejas[0].id, p2: obj.parejas[2].id }
+                ];
+            } else {
+                partidosBase = [
+                    { id: 1, desc: "Ronda 1 - Partido A", p1: obj.parejas[0].id, p2: obj.parejas[1].id },
+                    { id: 2, desc: "Ronda 1 - Partido B", p1: obj.parejas[2].id, p2: obj.parejas[3].id },
+                    { id: 3, desc: "Ronda 2 - Ganadores", p1: null, p2: null, bloqueado: true },
+                    { id: 4, desc: "Ronda 2 - Perdedores", p1: null, p2: null, bloqueado: true }
+                ];
+            }
+
+            obj.partidos = partidosBase.map(p => ({
+                ...p,
+                jugado: false,
+                sets: [[0,0],[0,0],[0,0]],
+                fecha: "", horario: "", sede: ""
+            }));
+
+            return obj;
+        }
+
+        function inicializarEstructuraPlayoffs(cat, clasificados, totalZonas) {
+            cat.playoff.rondas = {};
+            let mapaPredictivo = generarMapaPredictivoFAP(totalZonas);
+            let capacidadCuadro = mapaPredictivo.length;
+
+            if (capacidadCuadro === 32) {
+                cat.playoff.faseInicial = "dieciseisavos";
+                cat.playoff.rondas["dieciseisavos"] = generarPartidosRondaConPrediccion(16, "16avos", mapaPredictivo);
+                cat.playoff.rondas["octavos"] = generarPartidosRondaVacia(8, "Octavos");
+            } else if (capacidadCuadro === 16) {
+                cat.playoff.faseInicial = "octavos";
+                cat.playoff.rondas["octavos"] = generarPartidosRondaConPrediccion(8, "Octavos", mapaPredictivo);
+            } else if (capacidadCuadro === 8) {
+                cat.playoff.faseInicial = "cuartos";
+                cat.playoff.rondas["cuartos"] = generarPartidosRondaConPrediccion(4, "Cuartos", mapaPredictivo);
+            } else {
+                cat.playoff.faseInicial = "semis";
+                cat.playoff.rondas["semis"] = generarPartidosRondaConPrediccion(2, "Semifinal", mapaPredictivo);
+            }
+
+            if (!cat.playoff.rondas["cuartos"]) cat.playoff.rondas["cuartos"] = generarPartidosRondaVacia(4, "Cuartos");
+            if (!cat.playoff.rondas["semis"]) cat.playoff.rondas["semis"] = generarPartidosRondaVacia(2, "Semifinal");
+            cat.playoff.rondas["final"] = generarPartidosRondaVacia(1, "Gran Final");
+        }
+
+        function generarMapaPredictivoFAP(totalZonas) {
+            let primeros = []; let segundos = [];
+            for (let i = 0; i < totalZonas; i++) {
+                let letra = String.fromCharCode(65 + i);
+                primeros.push(`1º Zona ${letra}`); segundos.push(`2º Zona ${letra}`);
+            }
+
+            let maxCasilleros = 4;
+            if (totalZonas > 2) maxCasilleros = 8;
+            if (totalZonas > 4) maxCasilleros = 16;
+            if (totalZonas > 8) maxCasilleros = 32;
+
+            let resultado = new Array(maxCasilleros).fill("Vacante / Bye");
+
+            if (maxCasilleros === 8) {
+                resultado[0] = "1º Zona A"; resultado[1] = "2º Zona B";
+                resultado[2] = "1º Zona C"; resultado[3] = "2º Zona D";
+                resultado[4] = "1º Zona D"; resultado[5] = "2º Zona C";
+                resultado[6] = "1º Zona B"; resultado[7] = "2º Zona A";
+            } 
+            else if (maxCasilleros === 16) {
+                resultado[0] = "1º Zona A"; resultado[1] = "2º Zona B";
+                resultado[2] = "1º Zona H"; resultado[3] = "2º Zona G";
+                resultado[4] = "1º Zona E"; resultado[5] = "2º Zona F";
+                resultado[6] = "1º Zona D"; resultado[7] = "2º Zona C";
+                resultado[8] = "1º Zona C"; resultado[9] = "2º Zona D";
+                resultado[10] = "1º Zona F"; resultado[11] = "2º Zona E";
+                resultado[12] = "1º Zona G"; resultado[13] = "2º Zona H";
+                resultado[14] = "1º Zona B"; resultado[15] = "2º Zona A";
+            } 
+            else {
+                let medio = maxCasilleros / 2;
+                for (let i = 0; i < totalZonas; i++) {
+                    let pIdx = (i % 2 === 0) ? (i * 2) : (maxCasilleros - (i * 2));
+                    if (pIdx >= 0 && pIdx < maxCasilleros) {
+                        resultado[pIdx] = primeros[i];
+                        let sIdx = (pIdx < medio) ? (pIdx + medio + 1) : (pIdx - medio - 1);
+                        if (sIdx >= 0 && sIdx < maxCasilleros) resultado[sIdx] = segundos[i];
+                    }
+                }
+                let sCount = 0;
+                for(let i=0; i<maxCasilleros; i++) {
+                    if(resultado[i] === "Vacante / Bye" && sCount < segundos.length) {
+                        if(!resultado.includes(segundos[sCount])) resultado[i] = segundos[sCount];
+                        sCount++;
+                    }
+                }
+            }
+            return resultado;
+        }
+
+        function generarPartidosRondaConPrediccion(cantidad, prefijo, mapa) {
+            let lista = []; let indexMapa = 0;
+            for (let i = 1; i <= cantidad; i++) {
+                lista.push({
+                    id: i, desc: `${prefijo} - Llave ${i}`,
+                    p1: mapa[indexMapa++] || "Vacante / Bye", p2: mapa[indexMapa++] || "Vacante / Bye",
+                    jugado: false, sets: [[0,0],[0,0],[0,0]], ganador: "",
+                    fecha: "", horario: "", sede: ""
+                });
+            }
+            return lista;
+        }
+
+        function generarPartidosRondaVacia(cantidad, prefijo) {
+            let lista = [];
+            for (let i = 1; i <= cantidad; i++) {
+                lista.push({
+                    id: i, desc: `${prefijo} - Llave ${i}`,
+                    p1: "Esperando Ganador...", p2: "Esperando Ganador...",
+                    jugado: false, sets: [[0,0],[0,0],[0,0]], ganador: "",
+                    fecha: "", horario: "", sede: ""
+                });
+            }
+            return lista;
+        }
+
+        function cambiarNombrePareja(nombreZona, parejaId) {
+            if(!esAdminActivo) return;
+            let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
+            let zona = cat.zonas[nombreZona];
+            let p = zona.parejas.find(p => p.id === parejaId);
+            let nuevo = prompt(`Modificar nombre para ${p.nombre}:`, p.nombre);
+            if (nuevo) { 
+                p.nombre = nuevo; 
+                recalcularTodoElTorneo(); 
+                persistirEnLocalStorage();
+            }
+        }
+
+        function guardarPartidoDinamico(nombreZona, partidoId) {
+            if(!esAdminActivo) return;
+            let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
+            let zona = cat.zonas[nombreZona];
+            let partido = zona.partidos.find(p => p.id === partidoId);
+            
+            for(let s = 1; s <= 3; s++) {
+                partido.sets[s-1][0] = parseInt(document.getElementById(`partido-${nombreZona}-${partidoId}-s${s}-p1`)?.value) || 0;
+                partido.sets[s-1][1] = parseInt(document.getElementById(`partido-${nombreZona}-${partidoId}-s${s}-p2`)?.value) || 0;
+            }
+            
+            partido.fecha = document.getElementById(`partido-${nombreZona}-${partidoId}-fecha`)?.value || "";
+            partido.horario = document.getElementById(`partido-${nombreZona}-${partidoId}-hora`)?.value || "";
+            partido.sede = document.getElementById(`partido-${nombreZona}-${partidoId}-sede`)?.value || "";
+
+            if (partido.sets[0][0] > 0 || partido.sets[0][1] > 0 || partido.sets[1][0] > 0 || partido.sets[1][1] > 0) {
+                partido.jugado = true;
+            }
+            recalcularTodoElTorneo();
+            persistirEnLocalStorage();
+        }
+
+        function guardarValoresInputsTemporales() {
+            let valores = {};
+            document.querySelectorAll("input").forEach(input => {
+                if(input.id) valores[input.id] = input.value;
+            });
+            return valores;
+        }
+
+        function restaurarValoresInputsTemporales(valores) {
+            if(!valores) return;
+            Object.keys(valores).forEach(id => {
+                let el = document.getElementById(id);
+                if(el) el.value = valores[id];
+            });
+        }
+
+        function recalcularTodoElTorneo() {
+            let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
+            if(!cat || !cat.configurada) return;
+
+            let contenedor = document.getElementById('contenedor-zonas');
+            let backupHTMLInputs = guardarValoresInputsTemporales(); 
+            contenedor.innerHTML = '';
+
+            Object.keys(cat.zonas).forEach(nombreZona => {
+                let zona = cat.zonas[nombreZona];
+                zona.parejas.forEach(p => {
+                    p.pj = 0; p.pg = 0; p.pp = 0; p.sf = 0; p.sc = 0; p.ds = 0; p.gf = 0; p.gc = 0; p.dg = 0; p.pts = 0;
+                });
+
+                if (zona.tipo === 4) {
+                    let p1 = zona.partidos.find(p => p.id === 1);
+                    let p2 = zona.partidos.find(p => p.id === 2);
+
+                    if (p1.jugado) {
+                        let s1 = p1.sets.filter(s => s[0] > s[1]).length;
+                        let s2 = p1.sets.filter(s => s[1] > s[0]).length;
+                        p1.ganador = s1 > s2 ? p1.p1 : p1.p2; p1.perdedor = s1 > s2 ? p1.p2 : p1.p1;
+                    }
+                    if (p2.jugado) {
+                        let s1 = p2.sets.filter(s => s[0] > s[1]).length;
+                        let s2 = p2.sets.filter(s => s[1] > s[0]).length;
+                        p2.ganador = s1 > s2 ? p2.p1 : p2.p2; p2.perdedor = s1 > s2 ? p2.p2 : p2.p1;
+                    }
+
+                    let p3 = zona.partidos.find(p => p.id === 3);
+                    let p4 = zona.partidos.find(p => p.id === 4);
+
+                    if (p1.jugado && p2.jugado) {
+                        p3.p1 = p1.ganador; p3.p2 = p2.ganador; p3.bloqueado = false;
+                        p4.p1 = p1.perdedor; p4.p2 = p2.perdedor; p4.bloqueado = false;
+                    } else {
+                        p3.bloqueado = true; p4.bloqueado = true;
+                    }
+                }
+
+                zona.partidos.forEach(partido => {
+                    if (!partido.jugado || partido.p1 === null || partido.p2 === null) return;
+                    let par1 = zona.parejas.find(p => p.id === partido.p1);
+                    let par2 = zona.parejas.find(p => p.id === partido.p2);
+
+                    if(!par1 || !par2) return;
+
+                    par1.pj++; par2.pj++;
+                    let setsP1 = 0; let setsP2 = 0;
+
+                    partido.sets.forEach(set => {
+                        let g1 = set[0]; let g2 = set[1];
+                        if (g1 === 0 && g2 === 0) return;
+                        par1.gf += g1; par1.gc += g2; par2.gf += g2; par2.gc += g1;
+                        if (g1 > g2) { setsP1++; par1.sf++; par2.sc++; } 
+                        else if (g2 > g1) { setsP2++; par2.sf++; par1.sc++; }
+                    });
+
+                    if (setsP1 > setsP2) { par1.pg++; par1.pts += 2; par2.pp++; par2.pts += 1; } 
+                    else { par2.pg++; par2.pts += 2; par1.pp++; par1.pts += 1; }
+                });
+
+                zona.parejas.forEach(p => { p.ds = p.sf - p.sc; p.dg = p.gf - p.gc; });
+                zona.parejas.sort((a, b) => b.pts - a.pts || b.ds - a.ds || b.dg - a.dg);
+
+                contenedor.innerHTML += generarHTMLDeZona(nombreZona, zona);
+            });
+
+            restaurarValoresInputsTemporales(backupHTMLInputs);
+            renderizarColumnasPlayoffs();
+        }
+
+        function generarHTMLDeZona(nombre, zona) {
+            let trs = '';
+            zona.parejas.forEach((p, index) => {
+                let pos = index + 1;
+                let badge = pos <= 2 
+                    ? '<span class="text-green-400 text-xs font-bold bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">CLASIFICA</span>'
+                    : '<span class="text-red-400 text-xs font-bold bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">ELIMINADO</span>';
+
+                trs += `
+                    <tr class="hover:bg-gray-700/20 transition">
+                        <td class="p-2.5 font-bold text-gray-500 text-left text-xs">${pos}°</td>
+                        <td class="p-2.5 font-bold text-white text-left ${esAdminActivo ? 'cursor-pointer hover:text-blue-400':''}" onclick="cambiarNombrePareja('${nombre}', ${p.id})">${esAdminActivo ? '✏️ ':''}${p.nombre}</td>
+                        <td class="p-2.5">${p.pj}</td><td class="p-2.5 text-green-400 font-medium">${p.pg}</td><td class="p-2.5 text-red-400">${p.pp}</td>
+                        <td class="p-2.5 text-gray-400">${p.sf}</td><td class="p-2.5 text-gray-400">${p.sc}</td>
+                        <td class="p-2.5 font-bold ${p.ds>=0?'text-green-400':'text-red-400'} bg-gray-900/30">${p.ds>=0?'+':''}${p.ds}</td>
+                        <td class="p-2.5 text-gray-400">${p.gf}</td><td class="p-2.5 text-gray-400">${p.gc}</td>
+                        <td class="p-2.5 font-bold ${p.dg>=0?'text-green-400':'text-red-400'} bg-gray-900/30">${p.dg>=0?'+':''}${p.dg}</td>
+                        <td class="p-2.5 font-black text-green-400 bg-green-500/5">${p.pts}</td>
+                        <td class="p-2.5 text-right">${badge}</td>
+                    </tr>
+                `;
+            });
+
+            let fixtureCards = '';
+            zona.partidos.forEach(partido => {
+                if (partido.bloqueado) {
+                    fixtureCards += `
+                        <div class="bg-gray-900/40 p-3 rounded-xl border border-gray-800 text-center text-gray-600 flex flex-col justify-center h-[215px]">
+                            <span class="font-bold text-xs">${partido.desc}</span><span class="text-[11px] mt-1">⏳ Esperando posiciones...</span>
+                        </div>`;
+                    return;
+                }
+                let n1 = zona.parejas.find(p => p.id === partido.p1)?.nombre || "Definiendo";
+                let n2 = zona.parejas.find(p => p.id === partido.p2)?.nombre || "Definiendo";
+                let disabledAttr = !esAdminActivo ? "disabled" : "";
+
+                fixtureCards += `
+                    <div class="bg-gray-900 p-3 rounded-xl border ${partido.jugado ? 'border-green-500/30':'border-gray-700'} text-xs space-y-2">
+                        <div class="flex justify-between items-center text-gray-400 border-b border-gray-800 pb-1 font-semibold text-[11px]">
+                            <span>${partido.desc}</span><span class="${partido.jugado ? 'text-green-400':'text-yellow-500'}">${partido.jugado ? '✓ OK':'🎾'}</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-1 bg-gray-950 p-1.5 rounded border border-gray-800">
+                            <input type="text" id="partido-${nombre}-${partido.id}-fecha" value="${partido.fecha}" placeholder="Fecha" ${disabledAttr} class="w-full bg-gray-900 border border-gray-700 rounded text-[10px] px-1 text-center font-medium text-gray-300 placeholder-gray-600 focus:outline-none disabled:opacity-80">
+                            <input type="text" id="partido-${nombre}-${partido.id}-hora" value="${partido.horario}" placeholder="Hora" ${disabledAttr} class="w-full bg-gray-900 border border-gray-700 rounded text-[10px] px-1 text-center font-medium text-gray-300 placeholder-gray-600 focus:outline-none disabled:opacity-80">
+                            <input type="text" id="partido-${nombre}-${partido.id}-sede" value="${partido.sede}" placeholder="Sede" ${disabledAttr} class="w-full bg-gray-900 border border-gray-700 rounded text-[10px] px-1 text-center font-medium text-gray-300 placeholder-gray-600 focus:outline-none disabled:opacity-80">
+                        </div>
+
+                        <div class="flex justify-between items-center"><span class="text-white font-medium truncate w-[110px]">${n1}</span>
+                            <div class="flex gap-0.5">
+                                <input type="number" id="partido-${nombre}-${partido.id}-s1-p1" value="${partido.sets[0][0]}" ${disabledAttr} class="w-7 h-7 bg-gray-800 text-center rounded border border-gray-700 font-bold text-white text-xs focus:outline-none disabled:opacity-80">
+                                <input type="number" id="partido-${nombre}-${partido.id}-s2-p1" value="${partido.sets[1][0]}" ${disabledAttr} class="w-7 h-7 bg-gray-800 text-center rounded border border-gray-700 font-bold text-white text-xs focus:outline-none disabled:opacity-80">
+                                <input type="number" id="partido-${nombre}-${partido.id}-s3-p1" value="${partido.sets[2][0]}" ${disabledAttr} class="w-7 h-7 bg-gray-800 text-center rounded border border-gray-700 font-bold text-white text-xs focus:outline-none disabled:opacity-80">
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center"><span class="text-white font-medium truncate w-[110px]">${n2}</span>
+                            <div class="flex gap-0.5">
+                                <input type="number" id="partido-${nombre}-${partido.id}-s1-p2" value="${partido.sets[0][1]}" ${disabledAttr} class="w-7 h-7 bg-gray-800 text-center rounded border border-gray-700 font-bold text-white text-xs focus:outline-none disabled:opacity-80">
+                                <input type="number" id="partido-${nombre}-${partido.id}-s2-p2" value="${partido.sets[1][1]}" ${disabledAttr} class="w-7 h-7 bg-gray-800 text-center rounded border border-gray-700 font-bold text-white text-xs focus:outline-none disabled:opacity-80">
+                                <input type="number" id="partido-${nombre}-${partido.id}-s3-p2" value="${partido.sets[2][1]}" ${disabledAttr} class="w-7 h-7 bg-gray-800 text-center rounded border border-gray-700 font-bold text-white text-xs focus:outline-none disabled:opacity-80">
+                            </div>
+                        </div>
+                        <button onclick="guardarPartidoDinamico('${nombre}', ${partido.id})" class="w-full bg-green-700 hover:bg-green-600 font-bold text-white py-1 rounded transition text-[10px] uppercase tracking-wider solo-admin">Guardar Ficha</button>
+                    </div>
+                `;
+            });
+
+            return `
+                <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-md space-y-4">
+                    <h2 class="text-lg font-black text-white tracking-wide border-b border-gray-700 pb-2 flex items-center gap-2">
+                        <span class="w-2.5 h-5 bg-green-500 rounded-full inline-block"></span> TABLA Y PARTIDOS — ${nombre} 
+                    </h2>
+                    <div class="overflow-x-auto rounded-xl border border-gray-700/40">
+                        <table class="w-full text-center border-collapse text-xs min-w-[680px]">
+                            <thead>
+                                <tr class="bg-gray-900/60 text-gray-400 uppercase tracking-wider border-b border-gray-700 font-semibold">
+                                    <th class="p-2.5 text-left w-[40px]">Pos</th><th class="p-2.5 text-left w-[200px]">Pareja</th>
+                                    <th class="p-2.5">PJ</th><th class="p-2.5">PG</th><th class="p-2.5">PP</th>
+                                    <th class="p-2.5 bg-gray-900/20">SF</th><th class="p-2.5 bg-gray-900/20">SC</th><th class="p-2.5 text-green-400 bg-green-500/5">DS</th>
+                                    <th class="p-2.5 bg-gray-900/20">GF</th><th class="p-2.5 bg-gray-900/20">GC</th><th class="p-2.5 text-green-400 bg-green-500/5">DG</th>
+                                    <th class="p-2.5 text-green-400 font-bold bg-green-500/10">PTS</th><th class="p-2.5 text-right">Corte</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-700/40">${trs}</tbody>
+                        </table>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-2">${fixtureCards}</div>
+                </div>
+            `;
+        }
+
+        function cargarClasificadosALlaves() {
+            if(!esAdminActivo) return;
+            let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
+            let diccionarioClasificados = {};
+
+            Object.keys(cat.zonas).sort().forEach(nombreZona => {
+                let zona = cat.zonas[nombreZona];
+                let letra = nombreZona.replace("Zona ", "");
+                if (zona.parejas[0]) diccionarioClasificados[`1º Zona ${letra}`] = zona.parejas[0].nombre;
+                if (zona.parejas[1]) diccionarioClasificados[`2º Zona ${letra}`] = zona.parejas[1].nombre;
+            });
+
+            let fase = cat.playoff.faseInicial;
+            let listaPartidos = cat.playoff.rondas[fase];
+            let totalZonas = Object.keys(cat.zonas).length;
+            let mapaBase = generarMapaPredictivoFAP(totalZonas);
+
+            let indexMapa = 0;
+            listaPartidos.forEach(partido => {
+                let codigoP1 = mapaBase[indexMapa++];
+                let codigoP2 = mapaBase[indexMapa++];
+                partido.p1 = diccionarioClasificados[codigoP1] || codigoP1 || "Vacante / Bye";
+                partido.p2 = diccionarioClasificados[codigoP2] || codigoP2 || "Vacante / Bye";
+            });
+
+            renderizarColumnasPlayoffs();
+            persistirEnLocalStorage();
+            alert(`¡Matriz FAP sincronizada!`);
+        }
+
+        function guardarLlavePlayoff(faseKey, partidoId) {
+            if(!esAdminActivo) return;
+            let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
+            let rondaActual = cat.playoff.rondas[faseKey];
+            let partido = rondaActual.find(p => p.id === partidoId);
+
+            for(let s = 1; s <= 3; s++) {
+                partido.sets[s-1][0] = parseInt(document.getElementById(`playoff-${faseKey}-${partidoId}-s${s}-p1`).value) || 0;
+                partido.sets[s-1][1] = parseInt(document.getElementById(`playoff-${faseKey}-${partidoId}-s${s}-p2`).value) || 0;
+            }
+
+            partido.fecha = document.getElementById(`playoff-${faseKey}-${partidoId}-fecha`)?.value || "";
+            partido.horario = document.getElementById(`playoff-${faseKey}-${partidoId}-hora`)?.value || "";
+            partido.sede = document.getElementById(`playoff-${faseKey}-${partidoId}-sede`)?.value || "";
+
+            let s1 = partido.sets.filter(s => s[0] > s[1]).length;
+            let s2 = partido.sets.filter(s => s[1] > s[0]).length;
+
+            if (s1 > 0 || s2 > 0) {
+                partido.jugado = true;
+                partido.ganador = s1 > s2 ? partido.p1 : partido.p2;
+
+                let siguienteFase = "";
+                if (faseKey === "dieciseisavos") siguienteFase = "octavos";
+                if (faseKey === "octavos") siguienteFase = "cuartos";
+                if (faseKey === "cuartos") siguienteFase = "semis";
+                if (faseKey === "semis") siguienteFase = "final";
+
+                if (siguienteFase) {
+                    let targetPartidoId = Math.ceil(partidoId / 2);
+                    let partidoSiguiente = cat.playoff.rondas[siguienteFase].find(p => p.id === targetPartidoId);
+                    if (partidoId % 2 !== 0) {
+                        partidoSiguiente.p1 = partido.ganador;
+                    } else {
+                        partidoSiguiente.p2 = partido.ganador;
+                    }
+                }
+            }
+            renderizarColumnasPlayoffs();
+            persistirEnLocalStorage();
+        }
+
+        function renderizarColumnasPlayoffs() {
+            let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
+            let contenedor = document.getElementById('columnas-playoffs');
+            let backupInputs = guardarValoresInputsTemporales();
+            contenedor.innerHTML = '';
+
+            if(!cat || !cat.playoff.faseInicial) return;
+
+            let ordenRondas = ["dieciseisavos", "octavos", "cuartos", "semis", "final"];
+            let mostrar = false;
+
+            let capacidadCuadro = generarMapaPredictivoFAP(Object.keys(cat.zonas).length).length;
+            document.getElementById('info-fase-inicial').innerText = `Matriz Oficial FAP: Cuadro de ${capacidadCuadro} casilleros lineales para clasificados.`;
+
+            ordenRondas.forEach(fase => {
+                if (fase === cat.playoff.faseInicial) mostrar = true;
+                if (!mostrar) return;
+
+                let partidos = cat.playoff.rondas[fase];
+                if(!partidos) return;
+                let tituloColumna = fase === "dieciseisavos" ? "16avos de Final" : fase.toUpperCase();
+                
+                let htmlPartidos = '';
+                partidos.forEach(p => {
+                    let esPredictivoP1 = p.p1.includes("Zona") || p.p1.includes("Vacante");
+                    let esPredictivoP2 = p.p2.includes("Zona") || p.p2.includes("Vacante");
+                    let disabledAttr = !esAdminActivo ? "disabled" : "";
+
+                    htmlPartidos += `
+                        <div class="bg-gray-900 p-3 rounded-xl border ${p.jugado ? 'border-green-500/40 bg-green-950/10':'border-gray-700/80'} space-y-2 text-xs shadow-md w-[270px] my-2">
+                            <div class="flex justify-between items-center text-gray-400 border-b border-gray-800 pb-1 font-black text-[10px] tracking-wider">
+                                <span>${p.desc}</span><span class="${p.jugado ? 'text-green-400':'text-gray-500'}">${p.jugado ? '✓ FIN':'🎾 JUEGO'}</span>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-1 bg-gray-950 p-1.5 rounded border border-gray-800">
+                                <input type="text" id="playoff-${fase}-${p.id}-fecha" value="${p.fecha}" placeholder="Fecha" ${disabledAttr} class="w-full bg-gray-900 border border-gray-700 rounded text-[10px] px-1 text-center font-medium text-gray-300 placeholder-gray-600 focus:outline-none disabled:opacity-80">
+                                <input type="text" id="playoff-${fase}-${p.id}-hora" value="${p.horario}" placeholder="Hora" ${disabledAttr} class="w-full bg-gray-900 border border-gray-700 rounded text-[10px] px-1 text-center font-medium text-gray-300 placeholder-gray-600 focus:outline-none disabled:opacity-80">
+                                <input type="text" id="playoff-${fase}-${p.id}-sede" value="${p.sede}" placeholder="Sede" ${disabledAttr} class="w-full bg-gray-900 border border-gray-700 rounded text-[10px] px-1 text-center font-medium text-gray-300 placeholder-gray-600 focus:outline-none disabled:opacity-80">
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between items-center gap-1">
+                                    <span class="font-bold truncate w-[115px] ${esPredictivoP1 ? 'text-yellow-500/80 tracking-wide text-[11px]' : 'text-white'} ${p.jugado && p.ganador === p.p1 ? 'text-green-400 font-black' : ''}">
+                                        ${p.p1}
+                                    </span>
+                                    <div class="flex gap-0.5">
+                                        <input type="number" id="playoff-${fase}-${p.id}-s1-p1" value="${p.sets[0][0]}" ${disabledAttr} class="w-6 h-6 bg-gray-800 text-center rounded text-white font-bold border border-gray-700 text-[11px] focus:outline-none disabled:opacity-80">
+                                        <input type="number" id="playoff-${fase}-${p.id}-s2-p1" value="${p.sets[1][0]}" ${disabledAttr} class="w-6 h-6 bg-gray-800 text-center rounded text-white font-bold border border-gray-700 text-[11px] focus:outline-none disabled:opacity-80">
+                                        <input type="number" id="playoff-${fase}-${p.id}-s3-p1" value="${p.sets[2][0]}" ${disabledAttr} class="w-6 h-6 bg-gray-800 text-center rounded text-white font-bold border border-gray-700 text-[11px] focus:outline-none disabled:opacity-80">
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center gap-1">
+                                    <span class="font-bold truncate w-[115px] ${esPredictivoP2 ? 'text-yellow-500/80 tracking-wide text-[11px]' : 'text-white'} ${p.jugado && p.ganador === p.p2 ? 'text-green-400 font-black' : ''}">
+                                        ${p.p2}
+                                    </span>
+                                    <div class="flex gap-0.5">
+                                        <input type="number" id="playoff-${fase}-${p.id}-s1-p2" value="${p.sets[0][1]}" ${disabledAttr} class="w-6 h-6 bg-gray-800 text-center rounded text-white font-bold border border-gray-700 text-[11px] focus:outline-none disabled:opacity-80">
+                                        <input type="number" id="playoff-${fase}-${p.id}-s2-p2" value="${p.sets[1][1]}" ${disabledAttr} class="w-6 h-6 bg-gray-800 text-center rounded text-white font-bold border border-gray-700 text-[11px] focus:outline-none disabled:opacity-80">
+                                        <input type="number" id="playoff-${fase}-${p.id}-s3-p2" value="${p.sets[2][1]}" ${disabledAttr} class="w-6 h-6 bg-gray-800 text-center rounded text-white font-bold border border-gray-700 text-[11px] focus:outline-none disabled:opacity-80">
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="guardarLlavePlayoff('${fase}', ${p.id})" class="w-full bg-blue-700 hover:bg-blue-600 font-bold text-white py-1 rounded transition text-[10px] uppercase tracking-wider solo-admin">Guardar Ficha</button>
+                        </div>
+                    `;
+                });
+
+                contenedor.innerHTML += `
+                    <div class="flex flex-col items-center">
+                        <div class="text-xs font-black text-green-400 bg-gray-900 border border-gray-700 px-3 py-1 rounded-full mb-4 shadow-sm tracking-wider uppercase">${tituloColumna}</div>
+                        <div class="columna-bracket">${htmlPartidos}</div>
+                    </div>
+                `;
+            });
+
+            restaurarValoresInputsTemporales(backupInputs);
+        }
+    </script>
+</body>
+</html>
