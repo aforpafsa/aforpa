@@ -23,7 +23,6 @@
 
     <main class="max-w-[95%] mx-auto space-y-8">
         
-        <!-- BARRA DE ACCESO / SEGURIDAD -->
         <div class="flex justify-between items-center bg-gray-950 p-3 rounded-xl border border-gray-800 text-xs">
             <div class="flex items-center gap-2">
                 <span class="inline-block w-2.5 h-2.5 rounded-full bg-yellow-500" id="status-modo-color"></span>
@@ -36,15 +35,13 @@
             <button onclick="cerrarSesionAdmin()" id="btn-logout" class="hidden bg-red-600 hover:bg-red-500 text-white px-3 py-1 rounded font-bold transition">Cerrar Edición</button>
         </div>
 
-        <!-- PANEL DE CONTROL MULTICATEGORÍA -->
         <header class="bg-gray-800 p-6 rounded-2xl border border-green-500/30 shadow-xl space-y-6">
             <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-gray-700 pb-4">
                 <div>
-                    <h1 class="text-2xl font-black text-green-400 tracking-wider">AFORPA</h1>
+                    <h1 class="text-2xl font-black text-green-400 tracking-wider">AFORPA MULTICATEGORÍA</h1>
                     <p class="text-sm text-gray-400">Reglamento FAP — Cronograma Logístico Integrado</p>
                 </div>
                 
-                <!-- Gestión de Categorías -->
                 <div class="flex flex-wrap items-center gap-3 bg-gray-950 p-3 rounded-xl border border-gray-700 w-full lg:w-auto">
                     <div class="flex items-center gap-2 solo-admin">
                         <label class="text-xs font-bold text-gray-400 uppercase">Nueva:</label>
@@ -57,8 +54,7 @@
                     <div class="flex items-center gap-2">
                         <label class="text-xs font-bold text-gray-400 uppercase">Categoría:</label>
                         <select id="selector-categorias" onchange="cambiarCategoriaActiva()" class="bg-gray-800 text-white text-xs font-bold h-9 px-3 rounded-lg border border-gray-600 focus:outline-none focus:border-green-500 max-w-[150px]">
-                            <!-- Dinámico -->
-                        </select>
+                            </select>
                         <button onclick="eliminarCategoriaActual()" class="bg-red-600 hover:bg-red-500 text-white font-bold h-9 w-9 rounded-lg text-xs transition flex items-center justify-center shadow solo-admin" title="Eliminar categoría actual">
                             🗑️
                         </button>
@@ -66,7 +62,6 @@
                 </div>
             </div>
 
-            <!-- Configuración de la Categoría Seleccionada -->
             <div id="panel-config-categoria" class="hidden flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-900/60 p-4 rounded-xl border border-gray-700">
                 <div class="flex items-center gap-3">
                     <div class="flex items-center gap-2 solo-admin">
@@ -83,10 +78,8 @@
             </div>
         </header>
 
-        <!-- CONTENEDOR DINÁMICO DE ZONAS -->
         <div id="contenedor-zonas" class="space-y-12"></div>
 
-        <!-- 🏆 SECCIÓN DE LLAVES (PLAYOFFS ESCALONADOS FAP) -->
         <section id="seccion-playoffs" class="hidden bg-gray-800 rounded-2xl border border-gray-700 p-6 shadow-lg space-y-6">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-700 pb-4">
                 <div>
@@ -97,22 +90,20 @@
                     <p id="info-fase-inicial" class="text-xs text-gray-400 mt-1"></p>
                 </div>
                 <button onclick="cargarClasificadosALlaves()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs py-2 px-4 rounded-lg transition shadow-md border border-blue-400/30 solo-admin">
-                    👑 Sembrar Cabezas de Serie e Importar Cruces (FAP)
+                    👑 Sembrar automáticamente posiciones de Zonas (FAP)
                 </button>
             </div>
 
-            <!-- Contenedor Horizontal del Bracket -->
             <div class="overflow-x-auto pb-6">
                 <div id="columnas-playoffs" class="flex gap-8 items-stretch min-w-[1250px] p-2 bg-gray-950/40 rounded-xl border border-gray-800/60">
-                    <!-- Se rellena dinámicamente con la estructura de árbol -->
-                </div>
+                    </div>
             </div>
         </section>
 
     </main>
 
     <script>
-        // CONFIGURÁ TU CONTRASEÑA AQUÍ (Cualquiera puede leer el código, pero frena modificaciones accidentales de los usuarios)
+        // CONFIGURÁ TU CONTRASEÑA AQUÍ
         const CLAVE_ADMIN_SECRETA = "admin123";
         let esAdminActivo = false;
 
@@ -122,7 +113,6 @@
         };
 
         window.onload = function() {
-            // Intentar recuperar datos guardados previamente en este navegador
             const backup = localStorage.getItem("torneo_fap_data");
             if (backup) {
                 TorneoMaster = JSON.parse(backup);
@@ -132,12 +122,11 @@
                 }
             }
             
-            // Si está vacío, iniciar por defecto
             document.getElementById('nueva-cat-nombre').value = "Caballeros 4ta";
-            esAdminActivo = true; // Activo al inicio para permitir la primera configuración
+            esAdminActivo = true; 
             actualizarInterfazModo();
             crearCategoria();
-            esAdminActivo = false; // Bloquear inmediatamente
+            esAdminActivo = false; 
             actualizarInterfazModo();
         };
 
@@ -393,7 +382,7 @@
             if (totalZonas > 4) maxCasilleros = 16;
             if (totalZonas > 8) maxCasilleros = 32;
 
-            let resultado = new Array(maxCasilleros).fill("Vacante / Bye");
+            let resultado = new Array(maxCasilleros).fill("Vacante");
 
             if (maxCasilleros === 8) {
                 resultado[0] = "1º Zona A"; resultado[1] = "2º Zona B";
@@ -423,7 +412,7 @@
                 }
                 let sCount = 0;
                 for(let i=0; i<maxCasilleros; i++) {
-                    if(resultado[i] === "Vacante / Bye" && sCount < segundos.length) {
+                    if(resultado[i] === "Vacante" && sCount < segundos.length) {
                         if(!resultado.includes(segundos[sCount])) resultado[i] = segundos[sCount];
                         sCount++;
                     }
@@ -437,7 +426,7 @@
             for (let i = 1; i <= cantidad; i++) {
                 lista.push({
                     id: i, desc: `${prefijo} - Llave ${i}`,
-                    p1: mapa[indexMapa++] || "Vacante / Bye", p2: mapa[indexMapa++] || "Vacante / Bye",
+                    p1: mapa[indexMapa++] || "Vacante", p2: mapa[indexMapa++] || "Vacante",
                     jugado: false, sets: [[0,0],[0,0],[0,0]], ganador: "",
                     fecha: "", horario: "", sede: ""
                 });
@@ -450,7 +439,7 @@
             for (let i = 1; i <= cantidad; i++) {
                 lista.push({
                     id: i, desc: `${prefijo} - Llave ${i}`,
-                    p1: "Esperando Ganador...", p2: "Esperando Ganador...",
+                    p1: "Por definir", p2: "Por definir",
                     jugado: false, sets: [[0,0],[0,0],[0,0]], ganador: "",
                     fecha: "", horario: "", sede: ""
                 });
@@ -693,13 +682,24 @@
             listaPartidos.forEach(partido => {
                 let codigoP1 = mapaBase[indexMapa++];
                 let codigoP2 = mapaBase[indexMapa++];
-                partido.p1 = diccionarioClasificados[codigoP1] || codigoP1 || "Vacante / Bye";
-                partido.p2 = diccionarioClasificados[codigoP2] || codigoP2 || "Vacante / Bye";
+                partido.p1 = diccionarioClasificados[codigoP1] || codigoP1 || "Vacante";
+                partido.p2 = diccionarioClasificados[codigoP2] || codigoP2 || "Vacante";
             });
 
             renderizarColumnasPlayoffs();
             persistirEnLocalStorage();
-            alert(`¡Matriz FAP sincronizada!`);
+            alert(`¡Matriz FAP volcada en las casillas! Ahora podés editarlas manualmente si necesitás.`);
+        }
+
+        function actualizarNombreParejaPlayoffManual(faseKey, partidoId, slot) {
+            let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
+            let partido = cat.playoff.rondas[faseKey].find(p => p.id === partidoId);
+            let valor = document.getElementById(`playoff-name-${faseKey}-${partidoId}-${slot}`).value;
+            
+            if (slot === 1) partido.p1 = valor;
+            if (slot === 2) partido.p2 = valor;
+            
+            persistirEnLocalStorage();
         }
 
         function guardarLlavePlayoff(faseKey, partidoId) {
@@ -707,6 +707,10 @@
             let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
             let rondaActual = cat.playoff.rondas[faseKey];
             let partido = rondaActual.find(p => p.id === partidoId);
+
+            // Asegurar lectura de nombres manuales antes de procesar el set
+            partido.p1 = document.getElementById(`playoff-name-${faseKey}-${partidoId}-1`).value;
+            partido.p2 = document.getElementById(`playoff-name-${faseKey}-${partidoId}-2`).value;
 
             for(let s = 1; s <= 3; s++) {
                 partido.sets[s-1][0] = parseInt(document.getElementById(`playoff-${faseKey}-${partidoId}-s${s}-p1`).value) || 0;
@@ -747,7 +751,13 @@
         function renderizarColumnasPlayoffs() {
             let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
             let contenedor = document.getElementById('columnas-playoffs');
-            let backupInputs = guardarValoresInputsTemporales();
+            
+            // Guardamos valores temporales de inputs logísticos, pero NO de nombres que ahora son dinámicos
+            let backupInputs = {};
+            document.querySelectorAll("input[id^='playoff-']").forEach(input => {
+                if(!input.id.includes("name-")) backupInputs[input.id] = input.value;
+            });
+            
             contenedor.innerHTML = '';
 
             if(!cat || !cat.playoff.faseInicial) return;
@@ -756,7 +766,7 @@
             let mostrar = false;
 
             let capacidadCuadro = generarMapaPredictivoFAP(Object.keys(cat.zonas).length).length;
-            document.getElementById('info-fase-inicial').innerText = `Matriz Oficial FAP: Cuadro de ${capacidadCuadro} casilleros lineales para clasificados.`;
+            document.getElementById('info-fase-inicial').innerText = `Gestión de llaves: Podés escribir directamente sobre los casilleros de las parejas para armar el cuadro a mano.`;
 
             ordenRondas.forEach(fase => {
                 if (fase === cat.playoff.faseInicial) mostrar = true;
@@ -768,8 +778,6 @@
                 
                 let htmlPartidos = '';
                 partidos.forEach(p => {
-                    let esPredictivoP1 = p.p1.includes("Zona") || p.p1.includes("Vacante");
-                    let esPredictivoP2 = p.p2.includes("Zona") || p.p2.includes("Vacante");
                     let disabledAttr = !esAdminActivo ? "disabled" : "";
 
                     htmlPartidos += `
@@ -786,19 +794,22 @@
 
                             <div class="space-y-1.5">
                                 <div class="flex justify-between items-center gap-1">
-                                    <span class="font-bold truncate w-[115px] ${esPredictivoP1 ? 'text-yellow-500/80 tracking-wide text-[11px]' : 'text-white'} ${p.jugado && p.ganador === p.p1 ? 'text-green-400 font-black' : ''}">
-                                        ${p.p1}
-                                    </span>
+                                    <input type="text" id="playoff-name-${fase}-${p.id}-1" value="${p.p1}" ${disabledAttr} 
+                                        onchange="actualizarNombreParejaPlayoffManual('${fase}', ${p.id}, 1)"
+                                        class="font-bold bg-transparent text-white focus:bg-gray-800 focus:outline-none border-b border-transparent focus:border-blue-500 rounded px-1 truncate w-[125px] disabled:pointer-events-none ${p.jugado && p.ganador === p.p1 ? 'text-green-400 font-black' : ''}">
+                                    
                                     <div class="flex gap-0.5">
                                         <input type="number" id="playoff-${fase}-${p.id}-s1-p1" value="${p.sets[0][0]}" ${disabledAttr} class="w-6 h-6 bg-gray-800 text-center rounded text-white font-bold border border-gray-700 text-[11px] focus:outline-none disabled:opacity-80">
                                         <input type="number" id="playoff-${fase}-${p.id}-s2-p1" value="${p.sets[1][0]}" ${disabledAttr} class="w-6 h-6 bg-gray-800 text-center rounded text-white font-bold border border-gray-700 text-[11px] focus:outline-none disabled:opacity-80">
                                         <input type="number" id="playoff-${fase}-${p.id}-s3-p1" value="${p.sets[2][0]}" ${disabledAttr} class="w-6 h-6 bg-gray-800 text-center rounded text-white font-bold border border-gray-700 text-[11px] focus:outline-none disabled:opacity-80">
                                     </div>
                                 </div>
+                                
                                 <div class="flex justify-between items-center gap-1">
-                                    <span class="font-bold truncate w-[115px] ${esPredictivoP2 ? 'text-yellow-500/80 tracking-wide text-[11px]' : 'text-white'} ${p.jugado && p.ganador === p.p2 ? 'text-green-400 font-black' : ''}">
-                                        ${p.p2}
-                                    </span>
+                                    <input type="text" id="playoff-name-${fase}-${p.id}-2" value="${p.p2}" ${disabledAttr} 
+                                        onchange="actualizarNombreParejaPlayoffManual('${fase}', ${p.id}, 2)"
+                                        class="font-bold bg-transparent text-white focus:bg-gray-800 focus:outline-none border-b border-transparent focus:border-blue-500 rounded px-1 truncate w-[125px] disabled:pointer-events-none ${p.jugado && p.ganador === p.p2 ? 'text-green-400 font-black' : ''}">
+                                    
                                     <div class="flex gap-0.5">
                                         <input type="number" id="playoff-${fase}-${p.id}-s1-p2" value="${p.sets[0][1]}" ${disabledAttr} class="w-6 h-6 bg-gray-800 text-center rounded text-white font-bold border border-gray-700 text-[11px] focus:outline-none disabled:opacity-80">
                                         <input type="number" id="playoff-${fase}-${p.id}-s2-p2" value="${p.sets[1][1]}" ${disabledAttr} class="w-6 h-6 bg-gray-800 text-center rounded text-white font-bold border border-gray-700 text-[11px] focus:outline-none disabled:opacity-80">
@@ -819,7 +830,11 @@
                 `;
             });
 
-            restaurarValoresInputsTemporales(backupInputs);
+            // Restaurar fechas, horarios y sedes acumulados
+            Object.keys(backupInputs).forEach(id => {
+                let el = document.getElementById(id);
+                if(el) el.value = backupInputs[id];
+            });
         }
     </script>
 </body>
