@@ -107,7 +107,7 @@
     </main>
 
     <script>
-        // CONFIGURACIÓN DE TU BASE DE DATOS (PEGÁ ACÁ TUS DATOS DE JSONBIN)
+        // CONFIGURACIÓN DE TU BASE DE DATOS
         const BIN_ID = "6a29c1e2da38895dfea901ab";
         const API_KEY = "$2a$10$HvtdvuBBnHmp8XEvzgr.QOshXQT6vwdlxF2lswi5187Yy48foVrGe";
         
@@ -145,7 +145,7 @@
 
         // ENVIAR CAMBIOS A LA NUBE EN TIEMPO REAL
         async function guardarEnNube() {
-            if (!esAdminActivo) return; // Los espectadores no guardan nada
+            if (!esAdminActivo) return; 
             try {
                 await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
                     method: 'PUT',
@@ -502,8 +502,13 @@
             partido.horario = document.getElementById(`partido-${nombreZona}-${partidoId}-hora`)?.value || "";
             partido.sede = document.getElementById(`partido-${nombreZona}-${partidoId}-sede`)?.value || "";
 
-            if (partido.sets[0][0] > 0 || partition.sets[0][1] > 0 || partido.sets[1][0] > 0 || partido.sets[1][1] > 0) {
+            let s1_p1 = partido.sets[0][0]; let s1_p2 = partido.sets[0][1];
+            let s2_p1 = partido.sets[1][0]; let s2_p2 = partido.sets[1][1];
+            
+            if (s1_p1 > 0 || s1_p2 > 0 || s2_p1 > 0 || s2_p2 > 0) {
                 partido.jugado = true;
+            } else {
+                partido.jugado = false; 
             }
             recalcularTodoElTorneo();
             await guardarEnNube();
@@ -629,236 +634,227 @@
                         </div>`;
                     return;
                 }
+                
                 let n1 = zona.parejas.find(p => p.id === partido.p1)?.nombre || "Definiendo";
                 let n2 = zona.parejas.find(p => p.id === partido.p2)?.nombre || "Definiendo";
-                let disabledAttr = !esAdminActivo ? "disabled" : "";
+                
+                let statusBadge = partido.jugado 
+                    ? '<span class="bg-green-500/10 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Finalizado</span>'
+                    : '<span class="bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Programado</span>';
 
                 fixtureCards += `
-                    <div class="bg-gray-900 p-3 rounded-xl border ${partido.jugado ? 'border-green-500/30':'border-gray-700'} text-xs space-y-2">
-                        <div class="flex justify-between items-center text-gray-400 border-b border-gray-800 pb-1 font-semibold text-[11px]">
-                            <span>${partido.desc}</span><span class="${partido.jugado ? 'text-green-400':'text-yellow-500'}">${partido.jugado ? '✓ OK':'🎾'}</span>
+                    <div class="bg-gray-800/90 p-4 rounded-xl border border-gray-700 shadow flex flex-col justify-between space-y-3 min-w-[260px]">
+                        <div class="flex justify-between items-center border-b border-gray-700/50 pb-2">
+                            <span class="text-xs font-black text-gray-400 tracking-wider uppercase">${partido.desc}</span>
+                            ${statusBadge}
                         </div>
-                        
-                        <div class="grid grid-cols-3 gap-1 bg-gray-950 p-1.5 rounded border border-gray-800">
-                            <input type="text" id="partido-${nombre}-${partido.id}-fecha" value="${partido.fecha}" placeholder="Fecha" ${disabledAttr} class="w-full bg-gray-900 border border-gray-700 rounded text-[10px] px-1 text-center font-medium text-gray-300 placeholder-gray-600 focus:outline-none disabled:opacity-80">
-                            <input type="text" id="partido-${nombre}-${partido.id}-hora" value="${partido.horario}" placeholder="Hora" ${disabledAttr} class="w-full bg-gray-900 border border-gray-700 rounded text-[10px] px-1 text-center font-medium text-gray-300 placeholder-gray-600 focus:outline-none disabled:opacity-80">
-                            <input type="text" id="partido-${nombre}-${partido.id}-sede" value="${partido.sede}" placeholder="Sede" ${disabledAttr} class="w-full bg-gray-900 border border-gray-700 rounded text-[10px] px-1 text-center font-medium text-gray-300 placeholder-gray-600 focus:outline-none disabled:opacity-80">
-                        </div>
-
-                        <div class="flex justify-between items-center"><span class="text-white font-medium truncate w-[110px]">${n1}</span>
-                            <div class="flex gap-0.5">
-                                <input type="number" id="partido-${nombre}-${partido.id}-s1-p1" value="${partido.sets[0][0]}" ${disabledAttr} class="w-7 h-7 bg-gray-800 text-center rounded border border-gray-700 font-bold text-white text-xs focus:outline-none disabled:opacity-80">
-                                <input type="number" id="partido-${nombre}-${partido.id}-s2-p1" value="${partido.sets[1][0]}" ${disabledAttr} class="w-7 h-7 bg-gray-800 text-center rounded border border-gray-700 font-bold text-white text-xs focus:outline-none disabled:opacity-80">
-                                <input type="number" id="partido-${nombre}-${partido.id}-s3-p1" value="${partido.sets[2][0]}" ${disabledAttr} class="w-7 h-7 bg-gray-800 text-center rounded border border-gray-700 font-bold text-white text-xs focus:outline-none disabled:opacity-80">
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-semibold text-white max-w-[150px] truncate">${n1}</span>
+                                <div class="flex gap-1">
+                                    <input type="number" id="partido-${nombre}-${partido.id}-s1-p1" value="${partido.sets[0][0]}" ${!esAdminActivo?'disabled':''} class="w-7 h-7 bg-gray-950 text-center rounded font-bold text-xs text-white border border-gray-700 disabled:opacity-70">
+                                    <input type="number" id="partido-${nombre}-${partido.id}-s2-p1" value="${partido.sets[1][0]}" ${!esAdminActivo?'disabled':''} class="w-7 h-7 bg-gray-950 text-center rounded font-bold text-xs text-white border border-gray-700 disabled:opacity-70">
+                                    <input type="number" id="partido-${nombre}-${partido.id}-s3-p1" value="${partido.sets[2][0]}" ${!esAdminActivo?'disabled':''} class="w-7 h-7 bg-gray-950 text-center rounded font-bold text-xs text-white border border-gray-700 disabled:opacity-70">
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-semibold text-white max-w-[150px] truncate">${n2}</span>
+                                <div class="flex gap-1">
+                                    <input type="number" id="partido-${nombre}-${partido.id}-s1-p2" value="${partido.sets[0][1]}" ${!esAdminActivo?'disabled':''} class="w-7 h-7 bg-gray-950 text-center rounded font-bold text-xs text-white border border-gray-700 disabled:opacity-70">
+                                    <input type="number" id="partido-${nombre}-${partido.id}-s2-p2" value="${partido.sets[1][1]}" ${!esAdminActivo?'disabled':''} class="w-7 h-7 bg-gray-950 text-center rounded font-bold text-xs text-white border border-gray-700 disabled:opacity-70">
+                                    <input type="number" id="partido-${nombre}-${partido.id}-s3-p2" value="${partido.sets[2][1]}" ${!esAdminActivo?'disabled':''} class="w-7 h-7 bg-gray-950 text-center rounded font-bold text-xs text-white border border-gray-700 disabled:opacity-70">
+                                </div>
                             </div>
                         </div>
-                        <div class="flex justify-between items-center"><span class="text-white font-medium truncate w-[110px]">${n2}</span>
-                            <div class="flex gap-0.5">
-                                <input type="number" id="partido-${nombre}-${partido.id}-s1-p2" value="${partido.sets[0][1]}" ${disabledAttr} class="w-7 h-7 bg-gray-800 text-center rounded border border-gray-700 font-bold text-white text-xs focus:outline-none disabled:opacity-80">
-                                <input type="number" id="partido-${nombre}-${partido.id}-s2-p2" value="${partido.sets[1][1]}" ${disabledAttr} class="w-7 h-7 bg-gray-800 text-center rounded border border-gray-700 font-bold text-white text-xs focus:outline-none disabled:opacity-80">
-                                <input type="number" id="partido-${nombre}-${partido.id}-s3-p2" value="${partido.sets[2][1]}" ${disabledAttr} class="w-7 h-7 bg-gray-800 text-center rounded border border-gray-700 font-bold text-white text-xs focus:outline-none disabled:opacity-80">
-                            </div>
+                        <div class="space-y-1 pt-1 border-t border-gray-700/50">
+                            <input type="text" id="partido-${nombre}-${partido.id}-fecha" placeholder="Fecha (Ej: Sáb 14)" value="${partido.fecha}" ${!esAdminActivo?'disabled':''} class="w-full bg-transparent text-[11px] text-gray-400 focus:outline-none placeholder-gray-600 disabled:opacity-90">
+                            <input type="text" id="partido-${nombre}-${partido.id}-hora" placeholder="Horario (Ej: 16:30 hs)" value="${partido.horario}" ${!esAdminActivo?'disabled':''} class="w-full bg-transparent text-[11px] text-gray-400 focus:outline-none placeholder-gray-600 disabled:opacity-90">
+                            <input type="text" id="partido-${nombre}-${partido.id}-sede" placeholder="Sede / Cancha" value="${partido.sede}" ${!esAdminActivo?'disabled':''} class="w-full bg-transparent text-[11px] text-gray-400 focus:outline-none placeholder-gray-600 disabled:opacity-90">
                         </div>
-                        <button onclick="guardarPartidoDinamico('${nombre}', ${partido.id})" class="w-full bg-green-700 hover:bg-green-600 font-bold text-white py-1 rounded transition text-[10px] uppercase tracking-wider solo-admin">Guardar Ficha</button>
+                        <button onclick="guardarPartidoDinamico('${nombre}', ${partido.id})" class="solo-admin w-full bg-green-700 hover:bg-green-600 text-white font-bold py-1 rounded text-xs transition uppercase tracking-wider mt-1 shadow">
+                            Guardar Ficha
+                        </button>
                     </div>
                 `;
             });
 
             return `
-                <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-md space-y-4">
-                    <h2 class="text-lg font-black text-white tracking-wide border-b border-gray-700 pb-2 flex items-center gap-2">
-                        <span class="w-2.5 h-5 bg-green-500 rounded-full inline-block"></span> TABLA Y PARTIDOS — ${nombre} 
-                    </h2>
-                    <div class="overflow-x-auto rounded-xl border border-gray-700/40">
-                        <table class="w-full text-center border-collapse text-xs min-w-[680px]">
-                            <thead>
-                                <tr class="bg-gray-900/60 text-gray-400 uppercase tracking-wider border-b border-gray-700 font-semibold">
-                                    <th class="p-2.5 text-left w-[40px]">Pos</th><th class="p-2.5 text-left w-[200px]">Pareja</th>
-                                    <th class="p-2.5">PJ</th><th class="p-2.5">PG</th><th class="p-2.5">PP</th>
-                                    <th class="p-2.5 bg-gray-900/20">SF</th><th class="p-2.5 bg-gray-900/20">SC</th><th class="p-2.5 text-green-400 bg-green-500/5">DS</th>
-                                    <th class="p-2.5 bg-gray-900/20">GF</th><th class="p-2.5 bg-gray-900/20">GC</th><th class="p-2.5 text-green-400 bg-green-500/5">DG</th>
-                                    <th class="p-2.5 text-green-400 font-bold bg-green-500/10">PTS</th><th class="p-2.5 text-right">Corte</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-700/40">${trs}</tbody>
-                        </table>
+                <div class="bg-gray-800/50 rounded-2xl border border-gray-800 p-5 shadow-lg space-y-6">
+                    <h3 class="text-lg font-black text-green-400 tracking-wider uppercase flex items-center gap-2">
+                        <span class="w-2.5 h-5 bg-green-500 rounded-full inline-block"></span>${nombre}
+                    </h3>
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+                        <div class="xl:col-span-2 overflow-x-auto bg-gray-950/40 p-2 rounded-xl border border-gray-800">
+                            <table class="w-full text-center text-xs border-collapse">
+                                <thead>
+                                    <tr class="text-gray-400 font-bold border-b border-gray-800 uppercase tracking-wider text-[10px]">
+                                        <th class="p-2 text-left w-8">Pos</th><th class="p-2 text-left">Pareja</th>
+                                        <th class="p-2">PJ</th><th class="p-2 text-green-400">PG</th><th class="p-2 text-red-400">PP</th>
+                                        <th class="p-2">SF</th><th class="p-2">SC</th><th class="p-2 bg-gray-900/40">DS</th>
+                                        <th class="p-2">GF</th><th class="p-2">GC</th><th class="p-2 bg-gray-900/40">DG</th>
+                                        <th class="p-2 bg-green-500/10 text-green-400">Pts</th><th class="p-2 text-right">Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${trs}</tbody>
+                            </table>
+                        </div>
+                        <div class="flex gap-4 overflow-x-auto pb-2 xl:flex-col xl:overflow-x-visible xl:pb-0">
+                            ${fixtureCards}
+                        </div>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-2">${fixtureCards}</div>
                 </div>
             `;
-        }
-
-        async function cargarClasificadosALlaves() {
-            if(!esAdminActivo) return;
-            let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
-            let diccionarioClasificados = {};
-
-            Object.keys(cat.zonas).sort().forEach(nombreZona => {
-                let zona = cat.zonas[nombreZona];
-                let letra = nombreZona.replace("Zona ", "");
-                if (zona.parejas[0]) diccionarioClasificados[`1º Zona ${letra}`] = zona.parejas[0].nombre;
-                if (zona.parejas[1]) diccionarioClasificados[`2º Zona ${letra}`] = zona.parejas[1].nombre;
-            });
-
-            let fase = cat.playoff.faseInicial;
-            let listaPartidos = cat.playoff.rondas[fase];
-            let totalZonas = Object.keys(cat.zonas).length;
-            let mapaBase = generarMapaPredictivoFAP(totalZonas);
-
-            let indexMapa = 0;
-            listaPartidos.forEach(partido => {
-                let codigoP1 = mapaBase[indexMapa++];
-                let codigoP2 = mapaBase[indexMapa++];
-                partido.p1 = diccionarioClasificados[codigoP1] || codigoP1 || "Vacante";
-                partido.p2 = diccionarioClasificados[codigoP2] || codigoP2 || "Vacante";
-            });
-
-            renderizarColumnasPlayoffs();
-            await guardarEnNube();
-            alert(`¡Matriz FAP volcada en las casillas y guardada en internet!`);
-        }
-
-        async function actualizarNombreParejaPlayoffManual(faseKey, partidoId, slot) {
-            let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
-            let partido = cat.playoff.rondas[faseKey].find(p => p.id === partidoId);
-            let valor = document.getElementById(`playoff-name-${faseKey}-${partidoId}-${slot}`).value;
-            
-            if (slot === 1) partido.p1 = valor;
-            if (slot === 2) partido.p2 = valor;
-            
-            await guardarEnNube();
-        }
-
-        async function guardarLlavePlayoff(faseKey, partidoId) {
-            if(!esAdminActivo) return;
-            let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
-            let rondaActual = cat.playoff.rondas[faseKey];
-            let partido = rondaActual.find(p => p.id === partidoId);
-
-            partido.p1 = document.getElementById(`playoff-name-${faseKey}-${partidoId}-1`).value;
-            partido.p2 = document.getElementById(`playoff-name-${faseKey}-${partidoId}-2`).value;
-
-            for(let s = 1; s <= 3; s++) {
-                partido.sets[s-1][0] = parseInt(document.getElementById(`playoff-${faseKey}-${partidoId}-s${s}-p1`).value) || 0;
-                partido.sets[s-1][1] = parseInt(document.getElementById(`playoff-${faseKey}-${partidoId}-s${s}-p2`).value) || 0;
-            }
-
-            partido.fecha = document.getElementById(`playoff-${faseKey}-${partidoId}-fecha`)?.value || "";
-            partido.horario = document.getElementById(`playoff-${faseKey}-${partidoId}-hora`)?.value || "";
-            partido.sede = document.getElementById(`playoff-${faseKey}-${partidoId}-sede`)?.value || "";
-
-            let s1 = partido.sets.filter(s => s[0] > s[1]).length;
-            let s2 = partido.sets.filter(s => s[1] > s[0]).length;
-
-            if (s1 > 0 || s2 > 0) {
-                partido.jugado = true;
-                partido.ganador = s1 > s2 ? partido.p1 : partido.p2;
-
-                let siguienteFase = "";
-                if (faseKey === "dieciseisavos") siguienteFase = "octavos";
-                if (faseKey === "octavos") siguienteFase = "cuartos";
-                if (faseKey === "cuartos") siguienteFase = "semis";
-                if (faseKey === "semis") siguienteFase = "final";
-
-                if (siguienteFase) {
-                    let targetPartidoId = Math.ceil(partidoId / 2);
-                    let partidoSiguiente = cat.playoff.rondas[siguienteFase].find(p => p.id === targetPartidoId);
-                    if (partidoId % 2 !== 0) {
-                        partidoSiguiente.p1 = partido.ganador;
-                    } else {
-                        partidoSiguiente.p2 = partido.ganador;
-                    }
-                }
-            }
-            renderizarColumnasPlayoffs();
-            await guardarEnNube();
         }
 
         function renderizarColumnasPlayoffs() {
             let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
             let contenedor = document.getElementById('columnas-playoffs');
-            
-            let backupInputs = {};
-            document.querySelectorAll("input[id^='playoff-']").forEach(input => {
-                if(!input.id.includes("name-")) backupInputs[input.id] = input.value;
-            });
-            
-            contenedor.innerHTML = '';
+            if(!cat || !cat.playoff || !cat.playoff.faseInicial) {
+                contenedor.innerHTML = '<p class="text-xs text-gray-500 p-4">Estructurá la categoría para activar el cuadro de llaves.</p>';
+                return;
+            }
 
-            if(!cat || !cat.playoff.faseInicial) return;
-
+            let html = '';
             let ordenRondas = ["dieciseisavos", "octavos", "cuartos", "semis", "final"];
-            let mostrar = false;
+            let idxFase = ordenRondas.indexOf(cat.playoff.faseInicial);
+            let rondasVisibles = ordenRondas.slice(idxFase);
 
-            let capacidadCuadro = generarMapaPredictivoFAP(Object.keys(cat.zonas).length).length;
-            document.getElementById('info-fase-inicial').innerText = `Gestión de llaves: Podés escribir directamente sobre los casilleros de las parejas para armar el cuadro a mano.`;
+            rondasVisibles.forEach(rondaKey => {
+                let partidos = cat.playoff.rondas[rondaKey] || [];
+                let cards = '';
 
-            ordenRondas.forEach(fase => {
-                if (fase === cat.playoff.faseInicial) mostrar = true;
-                if (!mostrar) return;
-
-                let partidos = cat.playoff.rondas[fase];
-                if(!partidos) return;
-                let tituloColumna = fase === "dieciseisavos" ? "16avos de Final" : fase.toUpperCase();
-                
-                let htmlPartidos = '';
                 partidos.forEach(p => {
-                    let disabledAttr = !esAdminActivo ? "disabled" : "";
+                    let s1 = p.sets[0][0]; let s2 = p.sets[0][1];
+                    let s3 = p.sets[1][0]; let s4 = p.sets[1][1];
 
-                    htmlPartidos += `
-                        <div class="bg-gray-900 p-3 rounded-xl border ${p.jugado ? 'border-green-500/40 bg-green-950/10':'border-gray-700/80'} space-y-2 text-xs shadow-md w-[270px] my-2">
-                            <div class="flex justify-between items-center text-gray-400 border-b border-gray-800 pb-1 font-black text-[10px] tracking-wider">
-                                <span>${p.desc}</span><span class="${p.jugado ? 'text-green-400':'text-gray-500'}">${p.jugado ? '✓ FIN':'🎾 JUEGO'}</span>
+                    let ganado = p.jugado ? '<span class="text-green-400 font-bold ml-1 text-[10px]">🏆</span>' : '';
+
+                    cards += `
+                        <div class="bg-gray-900 p-3 rounded-xl border border-gray-800 space-y-2 w-[240px] shadow-md">
+                            <div class="text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-800 pb-1 flex justify-between">
+                                <span>${p.desc}</span>
+                                ${p.jugado ? '<span class="text-green-500">Fin</span>':'<span class="text-gray-600">Esp</span>'}
                             </div>
-
-                            <div class="grid grid-cols-3 gap-1 bg-gray-950 p-1.5 rounded border border-gray-800">
-                                <input type="text" id="playoff-${fase}-${p.id}-fecha" value="${p.fecha}" placeholder="Fecha" ${disabledAttr} class="w-full bg-gray-900 border border-gray-700 rounded text-[10px] px-1 text-center font-medium text-gray-300 placeholder-gray-600 focus:outline-none disabled:opacity-80">
-                                <input type="text" id="playoff-${fase}-${p.id}-hora" value="${p.horario}" placeholder="Hora" ${disabledAttr} class="w-full bg-gray-900 border border-gray-700 rounded text-[10px] px-1 text-center font-medium text-gray-300 placeholder-gray-600 focus:outline-none disabled:opacity-80">
-                                <input type="text" id="playoff-${fase}-${p.id}-sede" value="${p.sede}" placeholder="Sede" ${disabledAttr} class="w-full bg-gray-900 border border-gray-700 rounded text-[10px] px-1 text-center font-medium text-gray-300 placeholder-gray-600 focus:outline-none disabled:opacity-80">
-                            </div>
-
                             <div class="space-y-1.5">
-                                <div class="flex justify-between items-center gap-1">
-                                    <input type="text" id="playoff-name-${fase}-${p.id}-1" value="${p.p1}" ${disabledAttr} 
-                                        onchange="actualizarNombreParejaPlayoffManual('${fase}', ${p.id}, 1)"
-                                        class="font-bold bg-transparent text-white focus:bg-gray-800 focus:outline-none border-b border-transparent focus:border-blue-500 rounded px-1 truncate w-[125px] disabled:pointer-events-none ${p.jugado && p.ganador === p.p1 ? 'text-green-400 font-black' : ''}">
-                                    
-                                    <div class="flex gap-0.5">
-                                        <input type="number" id="playoff-${fase}-${p.id}-s1-p1" value="${p.sets[0][0]}" ${disabledAttr} class="w-6 h-6 bg-gray-800 text-center rounded text-white font-bold border border-gray-700 text-[11px] focus:outline-none disabled:opacity-80">
-                                        <input type="number" id="playoff-${fase}-${p.id}-s2-p1" value="${p.sets[1][0]}" ${disabledAttr} class="w-6 h-6 bg-gray-800 text-center rounded text-white font-bold border border-gray-700 text-[11px] focus:outline-none disabled:opacity-80">
-                                        <input type="number" id="playoff-${fase}-${p.id}-s3-p1" value="${p.sets[2][0]}" ${disabledAttr} class="w-6 h-6 bg-gray-800 text-center rounded text-white font-bold border border-gray-700 text-[11px] focus:outline-none disabled:opacity-80">
-                                    </div>
+                                <div class="flex justify-between text-xs">
+                                    <span class="truncate font-medium text-gray-300 ${p.ganador===p.p1?'text-green-400 font-bold':''}">${p.p1}</span>
+                                    <span class="font-bold text-gray-400">${p.jugado ? p.sets[0][0]+"-"+p.sets[1][0] : ''}</span>
                                 </div>
-                                
-                                <div class="flex justify-between items-center gap-1">
-                                    <input type="text" id="playoff-name-${fase}-${p.id}-2" value="${p.p2}" ${disabledAttr} 
-                                        onchange="actualizarNombreParejaPlayoffManual('${fase}', ${p.id}, 2)"
-                                        class="font-bold bg-transparent text-white focus:bg-gray-800 focus:outline-none border-b border-transparent focus:border-blue-500 rounded px-1 truncate w-[125px] disabled:pointer-events-none ${p.jugado && p.ganador === p.p2 ? 'text-green-400 font-black' : ''}">
-                                    
-                                    <div class="flex gap-0.5">
-                                        <input type="number" id="playoff-${fase}-${p.id}-s1-p2" value="${p.sets[0][1]}" ${disabledAttr} class="w-6 h-6 bg-gray-800 text-center rounded text-white font-bold border border-gray-700 text-[11px] focus:outline-none disabled:opacity-80">
-                                        <input type="number" id="playoff-${fase}-${p.id}-s2-p2" value="${p.sets[1][1]}" ${disabledAttr} class="w-6 h-6 bg-gray-800 text-center rounded text-white font-bold border border-gray-700 text-[11px] focus:outline-none disabled:opacity-80">
-                                        <input type="number" id="playoff-${fase}-${p.id}-s3-p2" value="${p.sets[2][1]}" ${disabledAttr} class="w-6 h-6 bg-gray-800 text-center rounded text-white font-bold border border-gray-700 text-[11px] focus:outline-none disabled:opacity-80">
-                                    </div>
+                                <div class="flex justify-between text-xs">
+                                    <span class="truncate font-medium text-gray-300 ${p.ganador===p.p2?'text-green-400 font-bold':''}">${p.p2}</span>
+                                    <span class="font-bold text-gray-400">${p.jugado ? p.sets[0][1]+"-"+p.sets[1][1] : ''}</span>
                                 </div>
                             </div>
-                            <button onclick="guardarLlavePlayoff('${fase}', ${p.id})" class="w-full bg-blue-700 hover:bg-blue-600 font-bold text-white py-1 rounded transition text-[10px] uppercase tracking-wider solo-admin">Guardar Ficha</button>
+                            <div class="solo-admin pt-1 border-t border-gray-800 grid grid-cols-2 gap-1">
+                                <button onclick="abrirModalResultadoPlayoff('${rondaKey}', ${p.id})" class="bg-blue-700 hover:bg-blue-600 text-white font-bold text-[10px] py-1 rounded transition uppercase">Cargar</button>
+                                <button onclick="limpiarPartidoPlayoff('${rondaKey}', ${p.id})" class="bg-red-800 hover:bg-red-700 text-white font-bold text-[10px] py-1 rounded transition uppercase">Borrar</button>
+                            </div>
                         </div>
                     `;
                 });
 
-                contenedor.innerHTML += `
-                    <div class="flex flex-col items-center">
-                        <div class="text-xs font-black text-green-400 bg-gray-900 border border-gray-700 px-3 py-1 rounded-full mb-4 shadow-sm tracking-wider uppercase">${tituloColumna}</div>
-                        <div class="columna-bracket">${htmlPartidos}</div>
+                html += `
+                    <div class="flex flex-col justify-around min-h-[500px] space-y-4 py-4 bg-gray-900/20 px-3 rounded-xl border border-gray-800/40">
+                        <h4 class="text-xs font-black text-center text-gray-400 tracking-widest uppercase border-b border-gray-800 pb-2">${rondaKey}</h4>
+                        <div class="columna-bracket">${cards}</div>
                     </div>
                 `;
             });
 
-            Object.keys(backupInputs).forEach(id => {
-                let el = document.getElementById(id);
-                if(el) el.value = backupInputs[id];
+            contenedor.innerHTML = html;
+        }
+
+        function abrirModalResultadoPlayoff(ronda, id) {
+            if(!esAdminActivo) return;
+            let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
+            let p = cat.playoff.rondas[ronda].find(x => x.id === id);
+            
+            let res = prompt(`Cargar resultado para ${p.p1} VS ${p.p2}\nFormato: Set1-Set2 (Ej: 6-4 6-3) o similar:`, p.jugado ? `${p.sets[0][0]}-${p.sets[0][1]} ${p.sets[1][0]}-${p.sets[1][1]}` : "");
+            if(res === null) return;
+
+            try {
+                let partes = res.trim().split(" ");
+                let s1 = partes[0].split("-");
+                let s2 = partes[1].split("-");
+
+                p.sets[0][0] = parseInt(s1[0]); p.sets[0][1] = parseInt(s1[1]);
+                p.sets[1][0] = parseInt(s2[0]); p.sets[1][1] = parseInt(s2[1]);
+                
+                let gP1 = 0; let gP2 = 0;
+                if(p.sets[0][0] > p.sets[0][1]) gP1++; else gP2++;
+                if(p.sets[1][0] > p.sets[1][1]) gP1++; else gP2++;
+
+                p.ganador = gP1 > gP2 ? p.p1 : p.p2;
+                p.jugado = true;
+
+                avanzarGanadorPlayoff(ronda, id, p.ganador);
+                recalcularTodoElTorneo();
+                guardarEnNube();
+            } catch(e) {
+                alert("Formato incorrecto. Recordá usar: 6-4 6-3");
+            }
+        }
+
+        function limpiarPartidoPlayoff(ronda, id) {
+            if(!esAdminActivo) return;
+            let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
+            let p = cat.playoff.rondas[ronda].find(x => x.id === id);
+            
+            p.sets = [[0,0],[0,0],[0,0]];
+            p.jugado = false;
+            p.ganador = "";
+
+            avanzarGanadorPlayoff(ronda, id, "Por definir");
+            recalcularTodoElTorneo();
+            guardarEnNube();
+        }
+
+        function avanzarGanadorPlayoff(rondaActual, partidoId, nombreGanador) {
+            let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
+            let mapaSiguiente = { "dieciseisavos": "octavos", "octavos": "cuartos", "cuartos": "semis", "semis": "final" };
+            let sigRondaKey = mapaSiguiente[rondaActual];
+            if(!sigRondaKey) return; 
+
+            let sigPartidoId = Math.ceil(partidoId / 2);
+            let esP1 = (partidoId % 2 !== 0);
+
+            let pSig = cat.playoff.rondas[sigRondaKey].find(x => x.id === sigPartidoId);
+            if(pSig) {
+                if(esP1) pSig.p1 = nombreGanador; else pSig.p2 = nombreGanador;
+            }
+        }
+
+        function cargarClasificadosALlaves() {
+            if(!esAdminActivo) return;
+            let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
+            let fase = cat.playoff.faseInicial;
+            let primeraRonda = cat.playoff.rondas[fase];
+
+            primeraRonda.forEach(p => {
+                p.p1 = traducirPosicionA_NombreReal(p.p1);
+                p.p2 = traducirPosicionA_NombreReal(p.p2);
             });
+
+            recalcularTodoElTorneo();
+            guardarEnNube();
+            alert("Siembra completada en base a las posiciones actuales de las zonas.");
+        }
+
+        function traducirPosicionA_NombreReal(stringFAP) {
+            if(!stringFAP.includes("Zona")) return stringFAP;
+            let cat = TorneoMaster.categorias[TorneoMaster.categoriaActiva];
+            
+            try {
+                let partes = stringFAP.split(" ");
+                let pos = parseInt(partes[0]); 
+                let nombreZona = "Zona " + partes[2]; 
+
+                let zona = cat.zonas[nombreZona];
+                if(zona && zona.parejas[pos-1]) {
+                    return zona.parejas[pos-1].nombre;
+                }
+            } catch(e){}
+            return stringFAP;
         }
     </script>
 </body>
